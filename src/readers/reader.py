@@ -7,7 +7,8 @@ from typing import Type
 import openpyxl
 from openpyxl.workbook import Workbook
 
-from formatters.models import BookModel, InternetResourceModel, ArticlesCollectionModel
+from formatters.models import BookModel, InternetResourceModel
+from formatters.models import ArticlesCollectionModel, MagazineArticleModel, NewspaperArticleModel, DissertationModel
 from logger import get_logger
 from readers.base import BaseReader
 
@@ -90,7 +91,124 @@ class ArticlesCollectionReader(BaseReader):
         }
 
 
+class NewspaperArticleReader(BaseReader):
+    """
+    Чтение модели статьи из газеты.
+    """
+
+    @property
+    def model(self) -> Type[NewspaperArticleModel]:
+        return NewspaperArticleModel
+
+    @property
+    def sheet(self) -> str:
+        return "Статья из газеты"
+
+    @property
+    def attributes(self) -> dict:
+        return {
+            "authors": {0: str},
+            "article_title": {1: str},
+            "newspaper_title": {2: str},
+            "year": {3: str},
+            "date": {4: str},
+            "article_num": {5: str},
+        }
+
+
+class MagazineArticleReader(BaseReader):
+    """
+    Чтение модели статьи из журнала.
+    """
+
+    @property
+    def model(self) -> Type[MagazineArticleModel]:
+        return MagazineArticleModel
+
+    @property
+    def sheet(self) -> str:
+        return "Статья из журнала"
+
+    @property
+    def attributes(self) -> dict:
+        return {
+            "authors": {0: str},
+            "article_title": {1: str},
+            "magazine_title": {2: str},
+            "year": {3: str},
+            "magazine_num": {4: str},
+            "pages": {5: str},
+        }
+
+
+class DissertationReader(BaseReader):
+    """
+    Чтение модели диссертации.
+    """
+
+    @property
+    def model(self) -> Type[DissertationModel]:
+        return DissertationModel
+
+    @property
+    def sheet(self) -> str:
+        return "Диссертация"
+
+    @property
+    def attributes(self) -> dict:
+        return {
+            "author": {0: str},
+            "title": {1: str},
+            "dr_or_ph": {2: str},
+            "field": {3: str},
+            "code": {4: str},
+            "city": {5: str},
+            "year": {6: str},
+            "pages": {7: str},
+        }
+
+
 class SourcesReader:
+    """
+    Чтение из источника данных.
+    """
+
+    # зарегистрированные читатели
+    readers = [
+        BookReader,
+        InternetResourceReader,
+        ArticlesCollectionReader,
+        NewspaperArticleReader,
+        MagazineArticleReader,
+        DissertationReader
+    ]
+
+    def __init__(self, path: str) -> None:
+        """
+        Конструктор.
+
+        :param path: Путь к исходному файлу для чтения.
+        """
+
+        logger.info("Загрузка рабочей книги ...")
+        self.workbook: Workbook = openpyxl.load_workbook(path)
+
+    def read(self) -> list:
+        """
+        Чтение исходного файла.
+
+        :return: Список прочитанных моделей (строк).
+        """
+
+        items = []
+        for reader in self.readers:
+            logger.info("Чтение %s ...", reader)
+            items.extend(reader(self.workbook).read())  # type: ignore
+
+        return items
+
+
+class SourcesReaderMLA:
     """
     Чтение из источника данных.
     """
@@ -122,6 +240,6 @@ class SourcesReader:
         items = []
         for reader in self.readers:
             logger.info("Чтение %s ...", reader)
-            items.extend(reader(self.workbook).read())  # type: ignore
+            items.extend(reader(self.workbook).read())
 
         return items
